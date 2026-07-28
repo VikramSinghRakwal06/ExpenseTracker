@@ -1,126 +1,88 @@
-import React, { useState,useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom"; // Import Link from react-router-dom
-import axios from 'axios'
-import {toast} from 'react-hot-toast'
-import Spinner from "../components/Layout/Spinner";
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
+import AuthLayout, { AuthField, AuthSubmitButton } from '../components/AuthLayout';
+
 const Register = () => {
-    const [loading,setLoading]=useState(false);
-    const navigate = useNavigate();
-    const [formData,setFormData]=useState({
-        name:"",
-        email:"",
-        password:"",
-})
-    const handleChange =(e)=>{
-        const {name, value}=e.target;
-        setFormData({
-            ...formData,
-            [name]:value,
-        })
+  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      const { data } = await api.post('/users/register', formData);
+      // Registration returns a token too, so send the user straight in
+      login({ user: data.user, token: data.token });
+      toast.success('Account created successfully');
+      navigate('/');
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Registration failed, please try again');
+    } finally {
+      setLoading(false);
     }
-    const handleSubmit =async (values)=>{
-       values.preventDefault();
-       try {
-        setLoading(true)
-        
-        await axios.post('/api/users/register',formData, {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        toast.success('Registration Successfull');
-        setLoading(false)
-        navigate('/login');
-       } catch (error) {
-        setLoading(false)
-        toast.error('invalid username or password')
-       }
-       
-    }
-        useEffect(()=>{
-          if(localStorage.getItem("user")){
-            navigate("/");
-          }
-        },[])
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      {loading && <Spinner/>}
-      <div className="bg-gray-900 border border-gray-700 shadow-lg rounded-2xl p-8 w-96">
-        <h2 className="text-white text-2xl font-semibold text-center mb-6">
-          Register
-        </h2>
-        <form  onSubmit={handleSubmit}>
-            {/* Name Input */}
-          <div className="mb-4">
-            <label className="block text-gray-300 text-sm mb-2" htmlFor="email">
-                Name
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              className="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
-              placeholder="Enter your name"
-              onChange={handleChange}
-              required
-            />
-          </div>
-          {/* Email Input */}
-          <div className="mb-4">
-            <label className="block text-gray-300 text-sm mb-2" htmlFor="email">
-              Email Address
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              className="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
-              placeholder="Enter your email"
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          {/* Password Input */}
-          <div className="mb-4">
-            <label className="block text-gray-300 text-sm mb-2" htmlFor="password">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              className="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
-              placeholder="Enter your password"
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          {/* Submit Button */}
-          <button
-           
-            type="submit"
-            className="w-full bg-gradient-to-r from-gray-700 to-gray-600 text-white py-3 rounded-lg hover:from-gray-600 hover:to-gray-500 transition-all"
-          >
-            Register
-          </button>
-        </form>
-
-        {/* Already Registered Section */}
-        <div className="mt-4 text-center">
-          <p className="text-gray-300 text-sm">
-            Already registered?{" "}
-            <Link to="/login" className="text-blue-500 hover:text-blue-400">
-              Click here to login
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
+    <AuthLayout
+      title="Create your account"
+      subtitle="Start tracking your income and expenses"
+      footer={
+        <>
+          Already registered?{' '}
+          <Link to="/login" className="text-blue-400 hover:text-blue-300">
+            Sign in
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit}>
+        <AuthField
+          label="Name"
+          type="text"
+          id="name"
+          name="name"
+          value={formData.name}
+          placeholder="Enter your name"
+          onChange={handleChange}
+          autoComplete="name"
+          required
+        />
+        <AuthField
+          label="Email Address"
+          type="email"
+          id="email"
+          name="email"
+          value={formData.email}
+          placeholder="you@example.com"
+          onChange={handleChange}
+          autoComplete="email"
+          required
+        />
+        <AuthField
+          label="Password"
+          type="password"
+          id="password"
+          name="password"
+          value={formData.password}
+          placeholder="At least 6 characters"
+          onChange={handleChange}
+          autoComplete="new-password"
+          minLength={6}
+          required
+        />
+        <AuthSubmitButton loading={loading}>Create account</AuthSubmitButton>
+      </form>
+    </AuthLayout>
   );
 };
 

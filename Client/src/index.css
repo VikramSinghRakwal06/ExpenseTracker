@@ -1,1 +1,5 @@
 @import "tailwindcss";
+
+/* Enables the `dark:` variant to be driven by a `.dark` class on <html>,
+   toggled by ThemeContext, instead of only following OS preference. */
+@custom-variant dark (&:where(.dark, .dark *));

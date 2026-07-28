@@ -1,15 +1,12 @@
-import React from 'react'
-import  Header  from './Header'
+import Header from './Header'
 import Footer from './Footer'
 
-const Layout = ({children}) => {
+const Layout = ({ children }) => {
   return (
-    <div className='flex flex-col min-h-screen'>
-      <Header/>
-      <div className='flex-grow'>
-        {children}
-         </div>
-      <Footer/>
+    <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-900">
+      <Header />
+      <main className="flex-grow">{children}</main>
+      <Footer />
     </div>
   )
 }

@@ -1,77 +1,99 @@
+const dayjs = require('dayjs');
 const Transaction = require('../models/transactionModel');
-const dayjs = require('dayjs')
+
 // Add a new transaction
 const addTransaction = async (req, res) => {
   try {
-    const newTransaction = new Transaction(req.body);
-    await newTransaction.save();
-    res.status(201).json({ message: "Transaction added successfully" });
+    const { amount, type, category, reference, description, date, paymentMode, paymentBank } = req.body;
+    const newTransaction = await Transaction.create({
+      userid: req.userId,
+      amount,
+      type,
+      category,
+      reference,
+      description,
+      date,
+      paymentMode,
+      paymentBank,
+    });
+    res.status(201).json({ success: true, message: 'Transaction added successfully', transaction: newTransaction });
   } catch (error) {
-    console.error("Error adding transaction:", error);
-    res.status(500).json({ message: "Failed to add transaction" });
+    console.error('Error adding transaction:', error);
+    res.status(500).json({ success: false, message: 'Failed to add transaction' });
   }
 };
 
-// Get all transactions
+// Get all transactions belonging to the authenticated user
 const getAllTransactions = async (req, res) => {
   try {
-    const { userid, frequency, selectedDate, type } = req.body;
+    const { frequency, selectedDate, type } = req.body;
 
-    // Base query to filter by userid
-    let query = { userid };
+    // Scope every query to the authenticated user - never trust a client-supplied userid
+    let query = { userid: req.userId };
 
-    // Filter by type (if provided and not "all")
-    if (type && type !== "all") {
+    if (type && type !== 'all') {
       query.type = type;
     }
 
-    // Filter by date range (if frequency is "custom" and selectedDate is provided)
-    if (frequency === "custom" && selectedDate && selectedDate.length === 2) {
+    if (frequency === 'custom' && selectedDate && selectedDate.length === 2) {
       const [startDate, endDate] = selectedDate;
       query.date = {
-        $gte: new Date(startDate), // Greater than or equal to start date
-        $lte: new Date(endDate),   // Less than or equal to end date
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
       };
-    } else if (frequency && frequency !== "custom") {
-      // Filter by frequency (e.g., last 7 days, last 30 days, etc.)
-      const startDate = dayjs().subtract(frequency, "days").toDate();
+    } else if (frequency && frequency !== 'custom') {
+      const startDate = dayjs().subtract(Number(frequency), 'days').toDate();
       query.date = {
-        $gte: startDate, // Greater than or equal to the calculated start date
-        $lte: new Date(), // Less than or equal to the current date
+        $gte: startDate,
+        $lte: new Date(),
       };
     }
 
-    // Fetch transactions based on the constructed query
-    const transactions = await Transaction.find(query).sort({ date: -1 }); // Sort by date in descending order
-
+    const transactions = await Transaction.find(query).sort({ date: -1 });
     res.status(200).json(transactions);
   } catch (error) {
-    console.error("Error fetching transactions:", error);
-    res.status(500).json({ message: "Failed to fetch transactions" });
+    console.error('Error fetching transactions:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch transactions' });
   }
 };
 
-// Delete a transaction
+// Delete a transaction - only if it belongs to the authenticated user
 const deleteTransaction = async (req, res) => {
   try {
     const { id } = req.params;
-    await Transaction.findByIdAndDelete(id);
-    res.status(200).json({ message: "Transaction deleted successfully" });
+    const deleted = await Transaction.findOneAndDelete({ _id: id, userid: req.userId });
+
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: 'Transaction not found' });
+    }
+
+    res.status(200).json({ success: true, message: 'Transaction deleted successfully' });
   } catch (error) {
-    console.error("Error deleting transaction:", error);
-    res.status(500).json({ message: "Failed to delete transaction" });
+    console.error('Error deleting transaction:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete transaction' });
   }
 };
 
-// Update a transaction
+// Update a transaction - only if it belongs to the authenticated user
 const updateTransaction = async (req, res) => {
   try {
     const { id } = req.params;
-    const updatedTransaction = await Transaction.findByIdAndUpdate(id, req.body, { new: true });
-    res.status(200).json(updatedTransaction);
+    const { amount, type, category, reference, description, date, paymentMode, paymentBank } = req.body;
+
+    const updatedTransaction = await Transaction.findOneAndUpdate(
+      { _id: id, userid: req.userId },
+      { amount, type, category, reference, description, date, paymentMode, paymentBank },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedTransaction) {
+      return res.status(404).json({ success: false, message: 'Transaction not found' });
+    }
+
+    res.status(200).json({ success: true, transaction: updatedTransaction });
   } catch (error) {
-    console.error("Error updating transaction:", error);
-    res.status(500).json({ message: "Failed to update transaction" });
+    console.error('Error updating transaction:', error);
+    res.status(500).json({ success: false, message: 'Failed to update transaction' });
   }
 };
 

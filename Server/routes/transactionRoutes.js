@@ -1,23 +1,28 @@
-const express = require("express");
+const express = require('express');
 const {
   addTransaction,
   getAllTransactions,
   deleteTransaction,
-  updateTransaction, // Import update controller
-} = require("../controllers/transactionController");
+  updateTransaction,
+} = require('../controllers/transactionController');
+const authMiddleware = require('../middleware/authMiddleware');
+const { validate, transactionRules } = require('../middleware/validators');
 
 const router = express.Router();
 
-// Add transactions
-router.post("/add-transaction", addTransaction);
+// Every transaction route requires a valid auth token
+router.use(authMiddleware);
 
-// Get Transactions
-router.post("/get-transactions", getAllTransactions);
+// Add transaction
+router.post('/add-transaction', transactionRules, validate, addTransaction);
 
-// Delete Transaction (Requires transaction ID)
-router.delete("/delete-transaction/:id", deleteTransaction);
+// Get transactions (filtered)
+router.post('/get-transactions', getAllTransactions);
 
-// Update Transaction (Requires transaction ID)
-router.put("/update-transaction/:id", updateTransaction); // New route for updating transactions
+// Delete transaction (requires transaction ID)
+router.delete('/delete-transaction/:id', deleteTransaction);
+
+// Update transaction (requires transaction ID)
+router.put('/update-transaction/:id', transactionRules, validate, updateTransaction);
 
 module.exports = router;

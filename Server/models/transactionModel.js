@@ -41,6 +41,8 @@ const transactionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ Make sure the export is correct:
+// Every query filters by userid, most also sort by date - index both together
+transactionSchema.index({ userid: 1, date: -1 });
+
 const transactionModel = mongoose.model('Transaction', transactionSchema);
 module.exports = transactionModel;
