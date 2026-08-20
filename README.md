@@ -74,9 +74,130 @@ ExpenseTracker/
 └── docs/screenshots/           Images used by this README
 ```
 
-**Request flow:** React page → `api/axios.js` (adds `Authorization: Bearer <token>`) → Vite dev proxy → Express route → validator middleware → auth middleware → controller → Mongoose model → MongoDB.
-
 `app.js` is deliberately separate from `server.js` so the test suite can import the Express app without opening a port or connecting to the real database.
+
+---
+
+## 🔄 How it works
+
+### System overview
+
+```mermaid
+flowchart LR
+    subgraph Browser["Browser — React SPA"]
+        direction TB
+        Pages["Pages<br/>Dashboard · Transactions · Analytics<br/>Profile · Settings"]
+        Guards["Route guards<br/>ProtectedRoute / PublicOnlyRoute"]
+        Ctx["Context<br/>Auth · Theme"]
+        Http["axios instance<br/>attaches JWT · handles 401"]
+        Guards --> Pages
+        Pages --> Ctx
+        Pages --> Http
+    end
+
+    subgraph API["Node.js — Express REST API"]
+        direction TB
+        Mw["Middleware<br/>helmet · cors · rate limit<br/>validation · JWT guard"]
+        Ctrl["Controllers<br/>user · transaction"]
+        Models["Mongoose models"]
+        Mw --> Ctrl --> Models
+    end
+
+    DB[("MongoDB<br/>users · transactions")]
+
+    Http -->|"Authorization: Bearer token"| Mw
+    Models --> DB
+```
+
+### Authentication — how a session starts
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Client as React Client
+    participant Axios as axios instance
+    participant API as Express API
+    participant DB as MongoDB
+
+    User->>Client: submits email + password
+    Client->>Axios: POST /users/login
+    Axios->>API: request
+    API->>API: rate limit — 20 attempts / 15 min
+    API->>API: validate payload
+    API->>DB: findOne by email
+    DB-->>API: user document
+    API->>API: bcrypt.compare(password, hash)
+    API->>API: jwt.sign({ userId }) — expires in 7d
+    API-->>Axios: 200 { token, user }
+    Axios-->>Client: response
+    Client->>Client: AuthProvider saves token + user
+    Client-->>User: redirect to Dashboard
+
+    Note over API: A wrong email and a wrong password<br/>return the same 401, so the API never<br/>reveals which accounts exist.
+```
+
+### Authorization — how every later request is scoped
+
+```mermaid
+sequenceDiagram
+    participant Client as React Client
+    participant Axios as axios instance
+    participant Guard as JWT guard
+    participant Ctrl as Controller
+    participant DB as MongoDB
+
+    Client->>Axios: request a protected endpoint
+    Axios->>Axios: interceptor attaches the stored token
+    Axios->>Guard: Authorization: Bearer token
+
+    alt token valid
+        Guard->>Guard: jwt.verify sets req.userId
+        Guard->>Ctrl: next()
+        Ctrl->>DB: query filtered by req.userId
+        Note over Ctrl,DB: Ownership comes from the verified token.<br/>A userid in the request body is ignored,<br/>and writes match on { _id, userid }.
+        DB-->>Ctrl: only this user's records
+        Ctrl-->>Axios: 200 data
+    else token missing or expired
+        Guard-->>Axios: 401 Unauthorized
+        Axios->>Axios: interceptor clears the session
+        Axios-->>Client: redirect to /login
+    end
+```
+
+### Request pipeline
+
+```mermaid
+flowchart TD
+    Req["Incoming request"] --> Helmet["helmet — security headers"]
+    Helmet --> Cors["cors — restricted to CLIENT_URL"]
+    Cors --> Json["express.json — parse body"]
+    Json --> Router{"Which route?"}
+
+    Router -->|"/users/login · /users/register"| Limit["rate limiter"]
+    Router -->|"/transactions/* · /users/profile"| Auth["JWT guard"]
+
+    Limit --> Valid["express-validator"]
+    Auth --> Valid
+    Valid -->|"invalid"| Err400["400 with the first error"]
+    Valid -->|"valid"| Controller["Controller"]
+    Auth -->|"bad token"| Err401["401 Unauthorized"]
+
+    Controller <-->|"query · result"| Mongo[("MongoDB")]
+    Controller --> Ok["2xx JSON response"]
+    Controller -->|"throws"| Handler["Central error handler"]
+```
+
+### Navigation and route guards
+
+```mermaid
+flowchart LR
+    Visitor(["Visitor"]) --> Check{"Signed in?"}
+    Check -->|"No"| Public["/login · /register"]
+    Check -->|"Yes"| Private["/ · /transactions · /analytics<br/>/profile · /settings"]
+    Public -->|"login or register succeeds"| Private
+    Private -->|"sign out, or a 401 from the API"| Public
+    Visitor -->|"unknown URL"| NotFound["404 page"]
+```
 
 ---
 
