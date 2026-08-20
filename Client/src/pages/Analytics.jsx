@@ -86,9 +86,12 @@ const Analytics = () => {
         return acc;
       }, {});
 
+    // Rank first, then colour, so the biggest slice always takes the first
+    // palette entry instead of whichever category happened to appear first.
     return Object.entries(byCategory)
-      .map(([name, value], index) => ({ name, value, color: COLORS[index % COLORS.length] }))
-      .sort((a, b) => b.value - a.value);
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .map((entry, index) => ({ ...entry, color: COLORS[index % COLORS.length] }));
   }, [filteredTransactions]);
 
   const pieTotal = useMemo(() => pieData.reduce((sum, d) => sum + d.value, 0), [pieData]);

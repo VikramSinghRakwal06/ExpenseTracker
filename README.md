@@ -2,7 +2,35 @@
 
 A full-stack personal finance application built on the MERN stack. Users register, record income and expense transactions, filter and export them, and analyse their spending through interactive charts — with JWT-authenticated, per-user data isolation throughout.
 
-![Dashboard](https://github.com/user-attachments/assets/4ccb5786-9b15-4dd0-a423-237188cc8946)
+![Dashboard](docs/screenshots/dashboard-light.png)
+
+---
+
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><strong>Dashboard</strong><br/><img src="docs/screenshots/dashboard-light.png" alt="Dashboard" /></td>
+    <td width="50%"><strong>Dashboard — dark mode</strong><br/><img src="docs/screenshots/dashboard-dark.png" alt="Dashboard in dark mode" /></td>
+  </tr>
+  <tr>
+    <td><strong>Analytics</strong><br/><img src="docs/screenshots/analytics-light.png" alt="Analytics" /></td>
+    <td><strong>Analytics — dark mode</strong><br/><img src="docs/screenshots/analytics-dark.png" alt="Analytics in dark mode" /></td>
+  </tr>
+  <tr>
+    <td><strong>Transactions</strong><br/><img src="docs/screenshots/transactions-light.png" alt="Transactions" /></td>
+    <td><strong>Transactions — dark mode</strong><br/><img src="docs/screenshots/transactions-dark.png" alt="Transactions in dark mode" /></td>
+  </tr>
+  <tr>
+    <td><strong>Add transaction</strong><br/><img src="docs/screenshots/add-transaction-modal.png" alt="Add transaction modal" /></td>
+    <td><strong>Sign in</strong><br/><img src="docs/screenshots/login.png" alt="Sign in screen" /></td>
+  </tr>
+</table>
+
+<p align="center">
+  <strong>Responsive on mobile</strong><br/>
+  <img src="docs/screenshots/mobile-dashboard.png" alt="Mobile dashboard" width="300" />
+</p>
 
 ---
 
@@ -34,15 +62,16 @@ ExpenseTracker/
 │       ├── context/            Auth + Theme state (Context API)
 │       ├── pages/              One component per route (lazy-loaded)
 │       └── utils/              Currency formatting
-└── Server/                     Express REST API
-    ├── app.js                  Express app (exported for tests)
-    ├── server.js               Env validation, DB connect, listen
-    ├── config/connectDB.js     Mongoose connection
-    ├── controllers/            Request handlers
-    ├── middleware/             JWT auth guard + express-validator rules
-    ├── models/                 Mongoose schemas
-    ├── routes/                 Route definitions
-    └── __tests__/              Jest + Supertest integration tests
+├── Server/                     Express REST API
+│   ├── app.js                  Express app (exported for tests)
+│   ├── server.js               Env validation, DB connect, listen
+│   ├── config/connectDB.js     Mongoose connection
+│   ├── controllers/            Request handlers
+│   ├── middleware/             JWT auth guard + express-validator rules
+│   ├── models/                 Mongoose schemas
+│   ├── routes/                 Route definitions
+│   └── __tests__/              Jest + Supertest integration tests
+└── docs/screenshots/           Images used by this README
 ```
 
 **Request flow:** React page → `api/axios.js` (adds `Authorization: Bearer <token>`) → Vite dev proxy → Express route → validator middleware → auth middleware → controller → Mongoose model → MongoDB.
